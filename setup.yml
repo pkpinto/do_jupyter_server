@@ -1,0 +1,46 @@
+---
+- hosts: all
+
+  vars:
+    pip_install:
+      - virtualenv
+      - pip
+    sudoers:
+      - jupyter
+
+  tasks:
+    - name: change root password
+      user:
+        name: root
+        password: ROOT_PASS
+
+    - name: install pip
+      easy_install:
+        name: pip
+        state: latest
+    - name: 'install python packages: {{ pip_install }}'
+      pip:
+        name: "{{ pip_install | join(' ') }}"
+        state: latest
+
+    - name: add jupyter user
+      user:
+        name: jupyter
+        password: JUPYTER_PASS
+
+    - name: ensure wheel group
+      group:
+        name: wheel
+        state: present
+    - name: allow wheel group to have passwordless sudo
+      lineinfile:
+        dest: /etc/sudoers
+        state: present
+        regexp: '^%wheel'
+        line: '%wheel ALL=(ALL) NOPASSWD: ALL'
+    - name: add sudoers users to wheel group
+      user:
+        name: "{{ item }}"
+        groups: wheel
+        append: yes
+      with_items: "{{ sudoers }}"

@@ -1,0 +1,50 @@
+---
+- hosts: all
+
+  vars:
+    pip_install:
+      - jupyter
+
+  tasks:
+    - name: 'install Python packages: {{ pip_install }}'
+      pip: 
+        name: "{{ pip_install | join(' ') }}"
+        state: latest
+    - name: patch ipython
+      replace:
+        dest: /usr/lib/python2.7/site-packages/IPython/utils/terminal.py
+        regexp: 'from backports.shutil_get_terminal_size import get_terminal_size as _get_terminal_size'
+        replace: 'from shutil_backports import get_terminal_size as _get_terminal_size'
+
+    - name: create notebooks path
+      file:
+        path: notebooks
+        state: directory
+        mode: 0755
+    - name: create .jupyter path
+      file:
+        path: .jupyter
+        state: directory mode=0755
+    - name: copy certificate 1/2
+      copy:
+        src: jupyter.key
+        dest: "{{ ansible_env.HOME }}/.jupyter/jupyter.key"
+    - name: copy certificate 2/2
+      copy:
+        src: jupyter.pem
+        dest: "{{ ansible_env.HOME }}/.jupyter/jupyter.pem"
+    - name: copy conf file
+      copy:
+        src: jupyter_notebook_config.py
+        dest: "{{ ansible_env.HOME }}/.jupyter/jupyter_notebook_config.py"
+
+    - name: copy jupyter.service
+      copy:
+        src: jupyter.service
+        dest: /usr/lib/systemd/system/jupyter.service
+      become: true
+    - name: start jupyter service as root
+      service:
+        name: jupyter
+        state: started
+      become: true
